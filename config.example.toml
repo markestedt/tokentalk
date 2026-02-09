@@ -1,0 +1,40 @@
+# TokenTalk Example Configuration
+# Copy this file to %APPDATA%\tokentalk\config.toml and edit as needed
+
+[hotkey]
+# Keyboard combination to activate recording
+# Format: "modifier+modifier+key" or just "modifier+modifier"
+# Modifiers: ctrl, shift, alt, win (or windows)
+# Examples: 
+#   "ctrl+win"     - Ctrl + Windows (modifier-only, hold both to record)
+#   "ctrl+shift+v" - Ctrl + Shift + V (traditional key combo)
+#   "ctrl+win+v"   - Ctrl + Windows + V  
+#   "alt+space"    - Alt + Space
+# Note: Either left or right Windows key will work for "win" modifier
+combo = "ctrl+shift+v"
+
+[audio]
+# Microphone device ID (empty string = system default)
+device = ""
+
+# Maximum recording duration in seconds
+max_seconds = 120
+
+[transcription]
+# Provider: "openai" or "whisper" (whisper not yet implemented)
+provider = "openai"
+
+# Model to use:
+# - For OpenAI: "whisper-1" (only option currently)
+# - For whisper.cpp: "tiny", "base", "small", "medium", "large" (not yet implemented)
+model = "whisper-1"
+
+# Language code (ISO 639-1): "en", "es", "fr", "de", "it", "pt", "nl", etc.
+language = "en"
+
+# Your OpenAI API key (required for OpenAI provider)
+# Get one at: https://platform.openai.com/api-keys
+openai_api_key = ""
+
+# Directory for local whisper models (for future whisper.cpp support)
+whisper_model_dir = ""  # defaults to %APPDATA%\tokentalk\models

@@ -1,0 +1,122 @@
+package transcribe
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+
+	"markestedt/tokentalk/audio"
+)
+
+// OpenAIProvider implements transcription using OpenAI's Whisper API
+type OpenAIProvider struct {
+	apiKey   string
+	model    string
+	language string
+	client   *http.Client
+}
+
+// NewOpenAIProvider creates a new OpenAI transcription provider
+func NewOpenAIProvider(apiKey, model, language string) *OpenAIProvider {
+	if model == "" {
+		model = "whisper-1"
+	}
+	return &OpenAIProvider{
+		apiKey:   apiKey,
+		model:    model,
+		language: language,
+		client:   &http.Client{},
+	}
+}
+
+// Name returns the provider name
+func (p *OpenAIProvider) Name() string {
+	return "openai"
+}
+
+// Transcribe sends audio to OpenAI's Whisper API for transcription
+func (p *OpenAIProvider) Transcribe(ctx context.Context, audioSeg audio.AudioSegment) (string, error) {
+	// Convert to WAV format
+	wavData, err := audioSeg.ToWAV()
+	if err != nil {
+		return "", fmt.Errorf("failed to convert to WAV: %w", err)
+	}
+
+	// Create multipart form data
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// Add audio file
+	part, err := writer.CreateFormFile("file", "audio.wav")
+	if err != nil {
+		return "", fmt.Errorf("failed to create form file: %w", err)
+	}
+	if _, err := part.Write(wavData); err != nil {
+		return "", fmt.Errorf("failed to write audio data: %w", err)
+	}
+
+	// Add model
+	if err := writer.WriteField("model", p.model); err != nil {
+		return "", fmt.Errorf("failed to write model field: %w", err)
+	}
+
+	// Add language if specified
+	if p.language != "" {
+		if err := writer.WriteField("language", p.language); err != nil {
+			return "", fmt.Errorf("failed to write language field: %w", err)
+		}
+	}
+
+	// Add prompt to guide transcription quality
+	prompt := "Transcribe the following audio with proper grammar, punctuation, and capitalization. " +
+		"Ensure sentences start with capital letters and end with appropriate punctuation marks (periods, question marks, or exclamation marks). " +
+		"Correct minor grammatical errors while preserving the speaker's intended meaning and tone. " +
+		"Format the output as natural, well-structured English text."
+	if err := writer.WriteField("prompt", prompt); err != nil {
+		return "", fmt.Errorf("failed to write prompt field: %w", err)
+	}
+
+	if err := writer.Close(); err != nil {
+		return "", fmt.Errorf("failed to close writer: %w", err)
+	}
+
+	// Create request
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/audio/transcriptions", body)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+p.apiKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Send request
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	// Parse JSON response
+	var result struct {
+		Text string `json:"text"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	return result.Text, nil
+}
