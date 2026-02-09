@@ -75,7 +75,8 @@ func (p *OpenAIProvider) Transcribe(ctx context.Context, audioSeg audio.AudioSeg
 	prompt := "Transcribe the following audio with proper grammar, punctuation, and capitalization. " +
 		"Ensure sentences start with capital letters and end with appropriate punctuation marks (periods, question marks, or exclamation marks). " +
 		"Correct minor grammatical errors while preserving the speaker's intended meaning and tone. " +
-		"Format the output as natural, well-structured English text."
+		"Recognize and accurately transcribe technical terminology, programming language keywords, API names, framework names, software tools, and common development acronyms (e.g., API, REST, SQL, JSON, HTML, CSS, Git, CI/CD, etc.). " +
+		"Format the output as natural, well-structured text in the configured language."
 	if err := writer.WriteField("prompt", prompt); err != nil {
 		return "", fmt.Errorf("failed to write prompt field: %w", err)
 	}
