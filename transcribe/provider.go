@@ -21,7 +21,7 @@ func NewProvider(cfg config.TranscriptionConfig) (Provider, error) {
 		if cfg.OpenAIAPIKey == "" {
 			return nil, fmt.Errorf("openai_api_key is required for OpenAI provider")
 		}
-		return NewOpenAIProvider(cfg.OpenAIAPIKey, cfg.Model, cfg.Language), nil
+		return NewOpenAIProvider(cfg.OpenAIAPIKey, cfg.Model, cfg.Language, cfg.DeveloperMode), nil
 	case "whisper":
 		return NewWhisperProvider(cfg.WhisperModelDir, cfg.Model, cfg.Language)
 	default:

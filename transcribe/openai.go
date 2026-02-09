@@ -14,22 +14,24 @@ import (
 
 // OpenAIProvider implements transcription using OpenAI's Whisper API
 type OpenAIProvider struct {
-	apiKey   string
-	model    string
-	language string
-	client   *http.Client
+	apiKey        string
+	model         string
+	language      string
+	developerMode bool
+	client        *http.Client
 }
 
 // NewOpenAIProvider creates a new OpenAI transcription provider
-func NewOpenAIProvider(apiKey, model, language string) *OpenAIProvider {
+func NewOpenAIProvider(apiKey, model, language string, developerMode bool) *OpenAIProvider {
 	if model == "" {
 		model = "whisper-1"
 	}
 	return &OpenAIProvider{
-		apiKey:   apiKey,
-		model:    model,
-		language: language,
-		client:   &http.Client{},
+		apiKey:        apiKey,
+		model:         model,
+		language:      language,
+		developerMode: developerMode,
+		client:        &http.Client{},
 	}
 }
 
@@ -74,9 +76,11 @@ func (p *OpenAIProvider) Transcribe(ctx context.Context, audioSeg audio.AudioSeg
 	// Add prompt to guide transcription quality
 	prompt := "Transcribe the following audio with proper grammar, punctuation, and capitalization. " +
 		"Ensure sentences start with capital letters and end with appropriate punctuation marks (periods, question marks, or exclamation marks). " +
-		"Correct minor grammatical errors while preserving the speaker's intended meaning and tone. " +
-		"Recognize and accurately transcribe technical terminology, programming language keywords, API names, framework names, software tools, and common development acronyms (e.g., API, REST, SQL, JSON, HTML, CSS, Git, CI/CD, etc.). " +
-		"Format the output as natural, well-structured text in the configured language."
+		"Correct minor grammatical errors while preserving the speaker's intended meaning and tone. "
+	if p.developerMode {
+		prompt += "Recognize and accurately transcribe technical terminology, programming language keywords, API names, framework names, software tools, and common development acronyms (e.g., API, REST, SQL, JSON, HTML, CSS, Git, CI/CD, etc.). "
+	}
+	prompt += "Format the output as natural, well-structured text in the configured language."
 	if err := writer.WriteField("prompt", prompt); err != nil {
 		return "", fmt.Errorf("failed to write prompt field: %w", err)
 	}

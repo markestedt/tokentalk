@@ -32,6 +32,9 @@ model = "whisper-1"
 # Language code (ISO 639-1): "en", "es", "fr", "de", "it", "pt", "nl", etc.
 language = "en"
 
+# Developer mode: Enhanced recognition of technical terms, programming keywords, and dev jargon
+developer_mode = false
+
 # Your OpenAI API key (required for OpenAI provider)
 # Get one at: https://platform.openai.com/api-keys
 openai_api_key = ""

@@ -28,6 +28,7 @@ type TranscriptionConfig struct {
 	Provider        string `toml:"provider"`
 	Model           string `toml:"model"`
 	Language        string `toml:"language"`
+	DeveloperMode   bool   `toml:"developer_mode"`
 	OpenAIAPIKey    string `toml:"openai_api_key"`
 	WhisperModelDir string `toml:"whisper_model_dir"`
 }
@@ -51,6 +52,7 @@ func defaultConfig() *Config {
 			Provider:        "openai",
 			Model:           "whisper-1",
 			Language:        "en",
+			DeveloperMode:   false,
 			OpenAIAPIKey:    "",
 			WhisperModelDir: filepath.Join(appData, "tokentalk", "models"),
 		},
