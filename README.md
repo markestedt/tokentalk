@@ -37,8 +37,8 @@ TokenTalk is a push-to-talk voice dictation tool for Windows. Press a global hot
 
 5. **Use it**:
    - Click in any text field (Notepad, browser, VS Code, etc.)
-   - Press and hold **Ctrl+Shift+V**
-   - Speak clearly
+   - Press and hold the configured hotkey
+   - Speak (like you would speak normally)
    - Release the keys
    - Your transcribed text will be pasted automatically!
 
