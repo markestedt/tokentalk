@@ -12,6 +12,10 @@ TokenTalk is a push-to-talk voice dictation tool for Windows. Press a global hot
 - **Smart Silence Detection**: Automatically filters out silent or empty recordings
 - **Instant Recording Start**: Pre-initialized audio device for minimal latency
 - **Developer Mode**: Enhanced recognition of technical terms and programming keywords
+- **Post-Processing**: Voice commands, custom dictionary, and optional grammar correction
+  - **Voice Commands**: Say "comma", "period", "new line", etc. to insert punctuation
+  - **Custom Dictionary**: Define corrections for technical terms and jargon
+  - **Grammar Correction**: Optional LLM-based grammar and punctuation fixes
 - **Simple Configuration**: TOML-based configuration file or web UI
 
 ## Quick Start
@@ -95,6 +99,25 @@ api_key = ""
 # Directory for local whisper models (for future whisper.cpp support)
 whisper_model_dir = ""  # defaults to %APPDATA%\tokentalk\models
 
+[postprocessing]
+# Enable post-processing (voice commands, dictionary, grammar)
+enabled = true
+
+# Voice commands: Convert "comma" to ,, "period" to ., etc.
+commands = true
+
+# Grammar correction: Fix grammar and punctuation using LLM (adds latency)
+grammar = false
+
+# Grammar provider: "match" (same as transcription), "openai", or "ollama" (future)
+grammar_provider = "match"
+
+# Model for OpenAI grammar correction (cheap, fast, competent)
+grammar_model = "gpt-4o-mini"
+
+# Dictionary file location for custom terms and corrections
+dictionary_file = ""  # defaults to %APPDATA%\tokentalk\dictionary.txt
+
 [web]
 # Enable the web-based configuration UI and statistics dashboard
 enabled = true
@@ -130,6 +153,19 @@ port = 9876
 - `prompt`: Optional prompt to guide transcription (helps with domain-specific terminology)
 - `api_key`: Your OpenAI API key (required for OpenAI provider)
 - `whisper_model_dir`: Directory for local whisper models (for future whisper.cpp support)
+
+#### `[postprocessing]`
+- `enabled`: Master toggle for all post-processing features
+- `commands`: Enable voice commands (e.g., "comma" → `,`)
+- `grammar`: Enable LLM-based grammar correction (adds latency)
+- `grammar_provider`: Provider for grammar correction
+  - `"match"` - Use same provider as transcription
+  - `"openai"` - Always use OpenAI
+  - `"ollama"` - Local LLM (future)
+- `grammar_model`: Model to use for grammar correction
+  - Recommended: `"gpt-4o-mini"` (cheap, fast, capable)
+- `dictionary_file`: Path to custom dictionary file
+  - Defaults to `%APPDATA%\tokentalk\dictionary.txt`
 
 #### `[web]`
 - `enabled`: Enable/disable the web dashboard
@@ -169,6 +205,112 @@ The dashboard shows live status updates:
 - **Idle**: Ready for dictation
 - **Recording...**: Currently capturing audio
 - **Processing...**: Transcribing audio
+
+## Post-Processing
+
+TokenTalk includes powerful post-processing features to improve transcription accuracy and add punctuation through voice commands.
+
+### Voice Commands
+
+Say specific phrases to insert punctuation and symbols. Commands only trigger when spoken as complete words (not as part of other words).
+
+**Common Commands:**
+- "comma" → `,`
+- "period" or "full stop" or "dot" → `.`
+- "question mark" → `?`
+- "exclamation mark" → `!`
+- "colon" → `:`
+- "semicolon" → `;`
+- "new line" → `\n`
+- "new paragraph" → `\n\n`
+
+**Quotes and Brackets:**
+- "open quote" / "close quote" → `"`
+- "open parenthesis" / "close parenthesis" → `(` / `)`
+- "open bracket" / "close bracket" → `[` / `]`
+- "open brace" / "close brace" → `{` / `}`
+
+**Symbols:**
+- "at sign" → `@`
+- "at sign space" → `@ ` (@ followed by space)
+- "hash" → `#`
+- "dollar sign" → `$`
+- "percent sign" → `%`
+- "ampersand" → `&`
+- "asterisk" → `*`
+- "plus" → `+`
+- "equals" → `=`
+- "dash" → `-`
+- "underscore" → `_`
+- "slash" → `/`
+- "backslash" → `\`
+
+**Word Boundary Detection:**
+Voice commands only trigger when they're complete words. For example:
+- ✅ "I want a comma here" → "I want a , here"
+- ❌ "Use the command prompt" → "Use the command prompt" (comma not replaced because it's part of "command")
+
+### Custom Dictionary
+
+Define custom terms and correction mappings to improve transcription of technical jargon, product names, and domain-specific terminology.
+
+**Two Types of Entries:**
+
+1. **Simple Terms** (bias Whisper toward recognizing these):
+   - `Kubernetes`
+   - `Anthropic`
+   - `OAuth2`
+
+2. **Correction Mappings** (fix common misrecognitions):
+   - `cube control -> kubectl`
+   - `enn eight -> n8n`
+   - `post grass -> Postgres`
+
+**Dictionary File Location:**
+`%APPDATA%\tokentalk\dictionary.txt`
+
+**Managing Dictionary:**
+Use the web dashboard (Settings → "Manage Dictionary") to:
+- Add simple terms
+- Add correction mappings
+- Edit and delete entries
+- See real-time preview of changes
+
+### Grammar Correction
+
+Optional LLM-based grammar and punctuation correction. **Disabled by default** as it adds latency (~500ms).
+
+**Configuration:**
+```toml
+[postprocessing]
+enabled = true
+grammar = true                    # Enable grammar correction
+grammar_provider = "match"        # Use same provider as transcription
+grammar_model = "gpt-4o-mini"     # Fast, cheap, capable model
+```
+
+**Provider Options:**
+- `"match"` - Use the same provider as transcription (OpenAI or local)
+- `"openai"` - Always use OpenAI
+- `"ollama"` - Local LLM (future)
+
+**What It Does:**
+- Fixes grammar and punctuation errors
+- Preserves technical terms and code identifiers
+- Formats file paths and version numbers correctly
+- Uses your custom dictionary for context
+
+**Recommended Model:**
+- **gpt-4o-mini**: $0.15/1M input tokens, ~200-500ms latency
+- Very affordable for grammar correction
+- Excellent at following instructions
+
+### Processing Pipeline Order
+
+Post-processing runs in this order:
+1. **Voice Commands** → Replace "comma" with `,`, etc.
+2. **Dictionary** → Apply custom corrections
+3. **Grammar** (if enabled) → LLM fixes remaining issues
 
 ## Getting an OpenAI API Key
 
@@ -263,6 +405,24 @@ Recording starts immediately when the hotkey is pressed, with logging and status
 - Try a different port in the `[web]` section
 - Check firewall settings if accessing from another device
 
+### Voice commands not working
+- Ensure `[postprocessing] enabled = true` and `commands = true` in your config
+- Commands only trigger when spoken as complete words (not part of other words)
+- Example: "comma" triggers in "I want a comma here" but not in "command prompt"
+- Check the web dashboard Settings → Post-Processing section
+
+### Grammar correction not working
+- Ensure `[postprocessing] grammar = true` in your config
+- Check that you have an OpenAI API key configured (if using OpenAI provider)
+- Grammar correction adds ~500ms latency - this is normal
+- Check logs for any API errors
+
+### Dictionary corrections not applying
+- Verify your dictionary file exists at the configured location
+- Use the web dashboard (Settings → Manage Dictionary) to verify entries
+- Dictionary corrections are case-insensitive but preserve replacement case
+- Restart TokenTalk after manually editing the dictionary file
+
 ## Building from Source
 
 ### Requirements
@@ -302,16 +462,23 @@ go build -o tokentalk.exe .
 - ✅ Real-time status updates via WebSocket
 - ✅ Interactive charts and analytics
 
+### M4 - Post-Processing (Completed)
+- ✅ Voice commands (30+ commands with word boundary detection)
+- ✅ Custom dictionary (simple terms and correction mappings)
+- ✅ Grammar correction via OpenAI (optional, configurable)
+- ✅ Web UI dictionary editor
+- ✅ Provider abstraction for future Ollama support
+- ✅ Processing pipeline (commands → dictionary → grammar)
+
 ### M2 (Planned)
 - ⏳ Local whisper.cpp support (in progress)
 - Linux support
-- Post-processing (punctuation, formatting improvements)
 - Automatic model download for local whisper
 - System tray icon
 - Audio device hot-swapping
-- Custom vocabulary/terminology lists
 - Keyboard shortcuts for common actions
 - Export history to CSV/JSON
+- Custom voice command editor in web UI
 
 ## License
 

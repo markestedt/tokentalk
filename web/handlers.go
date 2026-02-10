@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"markestedt/tokentalk/postprocess"
 )
 
 // handleConfig handles GET and PUT requests for configuration
@@ -26,29 +28,39 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Create a sanitized version of the config (hide API keys)
 	sanitized := struct {
-		Hotkey           string  `json:"hotkey"`
-		Provider         string  `json:"provider"`
-		Model            string  `json:"model"`
-		Language         string  `json:"language"`
-		Prompt           string  `json:"prompt"`
-		AudioDevice      int     `json:"audioDevice"`
-		SilenceThreshold float64 `json:"silenceThreshold"`
-		HasAPIKey        bool    `json:"hasApiKey"`
-		WebEnabled       bool    `json:"webEnabled"`
-		WebPort          int     `json:"webPort"`
-		DeveloperMode    bool    `json:"developerMode"`
+		Hotkey                 string  `json:"hotkey"`
+		Provider               string  `json:"provider"`
+		Model                  string  `json:"model"`
+		Language               string  `json:"language"`
+		Prompt                 string  `json:"prompt"`
+		AudioDevice            int     `json:"audioDevice"`
+		SilenceThreshold       float64 `json:"silenceThreshold"`
+		HasAPIKey              bool    `json:"hasApiKey"`
+		WebEnabled             bool    `json:"webEnabled"`
+		WebPort                int     `json:"webPort"`
+		DeveloperMode          bool    `json:"developerMode"`
+		PostprocessingEnabled  bool    `json:"postprocessingEnabled"`
+		PostprocessingCommands bool    `json:"postprocessingCommands"`
+		PostprocessingGrammar  bool    `json:"postprocessingGrammar"`
+		GrammarProvider        string  `json:"grammarProvider"`
+		GrammarModel           string  `json:"grammarModel"`
 	}{
-		Hotkey:           cfg.Hotkey,
-		Provider:         cfg.Transcription.Provider,
-		Model:            cfg.Transcription.Model,
-		Language:         cfg.Transcription.Language,
-		Prompt:           cfg.Transcription.Prompt,
-		AudioDevice:      cfg.Audio.Device,
-		SilenceThreshold: cfg.Audio.SilenceThreshold,
-		HasAPIKey:        cfg.Transcription.APIKey != "",
-		WebEnabled:       cfg.Web.Enabled,
-		WebPort:          cfg.Web.Port,
-		DeveloperMode:    cfg.DeveloperMode,
+		Hotkey:                 cfg.Hotkey,
+		Provider:               cfg.Transcription.Provider,
+		Model:                  cfg.Transcription.Model,
+		Language:               cfg.Transcription.Language,
+		Prompt:                 cfg.Transcription.Prompt,
+		AudioDevice:            cfg.Audio.Device,
+		SilenceThreshold:       cfg.Audio.SilenceThreshold,
+		HasAPIKey:              cfg.Transcription.APIKey != "",
+		WebEnabled:             cfg.Web.Enabled,
+		WebPort:                cfg.Web.Port,
+		DeveloperMode:          cfg.DeveloperMode,
+		PostprocessingEnabled:  cfg.Postprocessing.Enabled,
+		PostprocessingCommands: cfg.Postprocessing.Commands,
+		PostprocessingGrammar:  cfg.Postprocessing.Grammar,
+		GrammarProvider:        cfg.Postprocessing.GrammarProvider,
+		GrammarModel:           cfg.Postprocessing.GrammarModel,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -58,17 +70,22 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 // handlePutConfig updates the configuration
 func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Hotkey           *string  `json:"hotkey"`
-		Provider         *string  `json:"provider"`
-		Model            *string  `json:"model"`
-		Language         *string  `json:"language"`
-		Prompt           *string  `json:"prompt"`
-		AudioDevice      *int     `json:"audioDevice"`
-		SilenceThreshold *float64 `json:"silenceThreshold"`
-		APIKey           *string  `json:"apiKey"`
-		WebEnabled       *bool    `json:"webEnabled"`
-		WebPort          *int     `json:"webPort"`
-		DeveloperMode    *bool    `json:"developerMode"`
+		Hotkey                 *string  `json:"hotkey"`
+		Provider               *string  `json:"provider"`
+		Model                  *string  `json:"model"`
+		Language               *string  `json:"language"`
+		Prompt                 *string  `json:"prompt"`
+		AudioDevice            *int     `json:"audioDevice"`
+		SilenceThreshold       *float64 `json:"silenceThreshold"`
+		APIKey                 *string  `json:"apiKey"`
+		WebEnabled             *bool    `json:"webEnabled"`
+		WebPort                *int     `json:"webPort"`
+		DeveloperMode          *bool    `json:"developerMode"`
+		PostprocessingEnabled  *bool    `json:"postprocessingEnabled"`
+		PostprocessingCommands *bool    `json:"postprocessingCommands"`
+		PostprocessingGrammar  *bool    `json:"postprocessingGrammar"`
+		GrammarProvider        *string  `json:"grammarProvider"`
+		GrammarModel           *string  `json:"grammarModel"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -111,6 +128,21 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.DeveloperMode != nil {
 		cfg.DeveloperMode = *req.DeveloperMode
+	}
+	if req.PostprocessingEnabled != nil {
+		cfg.Postprocessing.Enabled = *req.PostprocessingEnabled
+	}
+	if req.PostprocessingCommands != nil {
+		cfg.Postprocessing.Commands = *req.PostprocessingCommands
+	}
+	if req.PostprocessingGrammar != nil {
+		cfg.Postprocessing.Grammar = *req.PostprocessingGrammar
+	}
+	if req.GrammarProvider != nil {
+		cfg.Postprocessing.GrammarProvider = *req.GrammarProvider
+	}
+	if req.GrammarModel != nil {
+		cfg.Postprocessing.GrammarModel = *req.GrammarModel
 	}
 
 	// Save to file
@@ -271,4 +303,93 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+// handleDictionary handles GET and PUT requests for the dictionary
+func (s *Server) handleDictionary(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetDictionary(w, r)
+	case http.MethodPut:
+		s.handlePutDictionary(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// handleGetDictionary returns the current dictionary
+func (s *Server) handleGetDictionary(w http.ResponseWriter, r *http.Request) {
+	cfg := s.GetConfig()
+
+	// Load dictionary
+	dict, err := postprocess.LoadDictionary(cfg.Postprocessing.DictionaryFile)
+	if err != nil {
+		slog.Error("Failed to load dictionary", "error", err)
+		http.Error(w, "Failed to load dictionary", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to API format
+	type DictionaryEntry struct {
+		Original    string `json:"original"`
+		Replacement string `json:"replacement"`
+		IsMapping   bool   `json:"isMapping"`
+	}
+
+	var entries []DictionaryEntry
+	for _, entry := range dict.Entries {
+		entries = append(entries, DictionaryEntry{
+			Original:    entry.Original,
+			Replacement: entry.Replacement,
+			IsMapping:   entry.IsMapping,
+		})
+	}
+
+	response := map[string]interface{}{
+		"entries": entries,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+// handlePutDictionary updates the dictionary
+func (s *Server) handlePutDictionary(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Entries []struct {
+			Original    string `json:"original"`
+			Replacement string `json:"replacement"`
+			IsMapping   bool   `json:"isMapping"`
+		} `json:"entries"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Convert to dictionary format
+	var entries []postprocess.DictionaryEntry
+	for _, entry := range req.Entries {
+		entries = append(entries, postprocess.DictionaryEntry{
+			Original:    entry.Original,
+			Replacement: entry.Replacement,
+			IsMapping:   entry.IsMapping,
+		})
+	}
+
+	dict := &postprocess.Dictionary{
+		Entries: entries,
+	}
+
+	// Save dictionary
+	cfg := s.GetConfig()
+	if err := postprocess.SaveDictionary(cfg.Postprocessing.DictionaryFile, dict); err != nil {
+		slog.Error("Failed to save dictionary", "error", err)
+		http.Error(w, "Failed to save dictionary", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }

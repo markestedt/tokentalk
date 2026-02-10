@@ -160,6 +160,11 @@ async function loadConfig() {
         document.getElementById('webEnabled').checked = config.webEnabled;
         document.getElementById('webPort').value = config.webPort;
         document.getElementById('developerMode').checked = config.developerMode;
+        document.getElementById('postprocessingEnabled').checked = config.postprocessingEnabled;
+        document.getElementById('postprocessingCommands').checked = config.postprocessingCommands;
+        document.getElementById('postprocessingGrammar').checked = config.postprocessingGrammar;
+        document.getElementById('grammarProvider').value = config.grammarProvider;
+        document.getElementById('grammarModel').value = config.grammarModel;
     } catch (error) {
         console.error('Failed to load config:', error);
         showMessage('error', 'Failed to load configuration');
@@ -181,6 +186,11 @@ async function handleConfigSubmit(e) {
         webEnabled: formData.get('webEnabled') === 'on',
         webPort: parseInt(formData.get('webPort')),
         developerMode: formData.get('developerMode') === 'on',
+        postprocessingEnabled: formData.get('postprocessingEnabled') === 'on',
+        postprocessingCommands: formData.get('postprocessingCommands') === 'on',
+        postprocessingGrammar: formData.get('postprocessingGrammar') === 'on',
+        grammarProvider: formData.get('grammarProvider'),
+        grammarModel: formData.get('grammarModel'),
     };
 
     const apiKey = formData.get('apiKey');
@@ -459,4 +469,97 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Dictionary Management
+let dictionaryEntries = [];
+
+document.getElementById('manageDictionary').addEventListener('click', openDictionaryModal);
+document.getElementById('closeDictionary').addEventListener('click', closeDictionaryModal);
+document.getElementById('addSimpleTerm').addEventListener('click', () => addDictionaryEntry(false));
+document.getElementById('addMapping').addEventListener('click', () => addDictionaryEntry(true));
+document.getElementById('saveDictionary').addEventListener('click', saveDictionary);
+
+async function openDictionaryModal() {
+    try {
+        const response = await fetch('/api/dictionary');
+        const data = await response.json();
+        dictionaryEntries = data.entries || [];
+        renderDictionary();
+        document.getElementById('dictionaryModal').style.display = 'block';
+    } catch (error) {
+        console.error('Failed to load dictionary:', error);
+        alert('Failed to load dictionary');
+    }
+}
+
+function closeDictionaryModal() {
+    document.getElementById('dictionaryModal').style.display = 'none';
+}
+
+function renderDictionary() {
+    const list = document.getElementById('dictionaryList');
+    list.innerHTML = '';
+
+    if (dictionaryEntries.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: #666;">No entries yet. Add a term or correction above.</p>';
+        return;
+    }
+
+    dictionaryEntries.forEach((entry, index) => {
+        const div = document.createElement('div');
+        div.className = 'dictionary-entry';
+        div.innerHTML = `
+            <div class="dictionary-entry-content">
+                ${entry.isMapping ? 
+                    `<span class="original">${escapeHtml(entry.original)}</span> → <span class="replacement">${escapeHtml(entry.replacement)}</span>` :
+                    `<span class="term">${escapeHtml(entry.replacement)}</span>`
+                }
+            </div>
+            <button class="btn-delete" onclick="deleteDictionaryEntry(${index})">Delete</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function addDictionaryEntry(isMapping) {
+    if (isMapping) {
+        const original = prompt('Enter the misheard phrase:');
+        if (!original) return;
+        const replacement = prompt('Enter the correct term:');
+        if (!replacement) return;
+        dictionaryEntries.push({ original, replacement, isMapping: true });
+    } else {
+        const term = prompt('Enter the term to add:');
+        if (!term) return;
+        dictionaryEntries.push({ original: '', replacement: term, isMapping: false });
+    }
+    renderDictionary();
+}
+
+function deleteDictionaryEntry(index) {
+    dictionaryEntries.splice(index, 1);
+    renderDictionary();
+}
+
+async function saveDictionary() {
+    try {
+        const response = await fetch('/api/dictionary', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ entries: dictionaryEntries }),
+        });
+
+        if (response.ok) {
+            alert('Dictionary saved successfully!');
+            closeDictionaryModal();
+        } else {
+            alert('Failed to save dictionary');
+        }
+    } catch (error) {
+        console.error('Failed to save dictionary:', error);
+        alert('Failed to save dictionary');
+    }
 }

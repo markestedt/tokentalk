@@ -10,6 +10,7 @@ import (
 	"markestedt/tokentalk/audio"
 	"markestedt/tokentalk/config"
 	"markestedt/tokentalk/platform"
+	"markestedt/tokentalk/postprocess"
 	"markestedt/tokentalk/storage"
 	"markestedt/tokentalk/transcribe"
 	"markestedt/tokentalk/web"
@@ -17,14 +18,16 @@ import (
 
 // Agent coordinates hotkey detection, recording, and transcription
 type Agent struct {
-	cfg       *config.Config
-	hotkey    platform.Hotkey
-	clipboard platform.Clipboard
-	paster    platform.Paster
-	recorder  *audio.Recorder
-	provider  transcribe.Provider
-	db        *storage.DB
-	webServer *web.Server
+	cfg        *config.Config
+	hotkey     platform.Hotkey
+	clipboard  platform.Clipboard
+	paster     platform.Paster
+	recorder   *audio.Recorder
+	provider   transcribe.Provider
+	pipeline   *postprocess.Pipeline
+	dictionary *postprocess.Dictionary
+	db         *storage.DB
+	webServer  *web.Server
 }
 
 // NewAgent creates a new agent instance
@@ -47,14 +50,79 @@ func NewAgent(cfg *config.Config) (*Agent, error) {
 		return nil, fmt.Errorf("failed to create transcription provider: %w", err)
 	}
 
+	// Load dictionary
+	dictionary, err := postprocess.LoadDictionary(cfg.Postprocessing.DictionaryFile)
+	if err != nil {
+		slog.Warn("Failed to load dictionary, continuing without it", "error", err)
+		dictionary = &postprocess.Dictionary{}
+	}
+
+	// Build post-processing pipeline
+	pipeline := buildPipeline(cfg, dictionary)
+
 	return &Agent{
-		cfg:       cfg,
-		hotkey:    platform.NewHotkey(),
-		clipboard: platform.NewClipboard(),
-		paster:    platform.NewPaster(),
-		recorder:  recorder,
-		provider:  provider,
+		cfg:        cfg,
+		hotkey:     platform.NewHotkey(),
+		clipboard:  platform.NewClipboard(),
+		paster:     platform.NewPaster(),
+		recorder:   recorder,
+		provider:   provider,
+		pipeline:   pipeline,
+		dictionary: dictionary,
 	}, nil
+}
+
+// buildPipeline creates the post-processing pipeline based on configuration
+func buildPipeline(cfg *config.Config, dictionary *postprocess.Dictionary) *postprocess.Pipeline {
+	pipeline := postprocess.NewPipeline()
+
+	if !cfg.Postprocessing.Enabled {
+		return pipeline
+	}
+
+	// 1. Voice commands (runs first)
+	if cfg.Postprocessing.Commands {
+		commands := postprocess.DefaultVoiceCommands()
+		pipeline.AddProcessor(postprocess.CommandProcessor(commands))
+	}
+
+	// 2. Dictionary corrections
+	if dictionary != nil && len(dictionary.Entries) > 0 {
+		pipeline.AddProcessor(postprocess.DictionaryProcessor(dictionary))
+	}
+
+	// 3. Grammar correction (runs last, optional)
+	if cfg.Postprocessing.Grammar {
+		var grammarProvider postprocess.GrammarProvider
+
+		// Determine which provider to use
+		provider := cfg.Postprocessing.GrammarProvider
+		if provider == "match" {
+			provider = cfg.Transcription.Provider
+		}
+
+		switch provider {
+		case "openai":
+			if cfg.Transcription.APIKey != "" {
+				grammarProvider = postprocess.NewOpenAIGrammarProvider(
+					cfg.Transcription.APIKey,
+					cfg.Postprocessing.GrammarModel,
+				)
+			} else {
+				slog.Warn("Grammar correction enabled but no API key configured")
+			}
+		case "ollama":
+			slog.Warn("Ollama grammar provider not yet implemented")
+		default:
+			slog.Warn("Unknown grammar provider", "provider", provider)
+		}
+
+		if grammarProvider != nil {
+			pipeline.AddProcessor(postprocess.GrammarProcessor(grammarProvider, dictionary))
+		}
+	}
+
+	return pipeline
 }
 
 // setStatus updates the agent status and broadcasts to web clients
@@ -188,6 +256,17 @@ func (a *Agent) Run(ctx context.Context) error {
 					dictation.CharacterCount = len(text)
 
 					slog.Info("Transcribed", "text", text, "duration", seg.Duration)
+
+					// Post-process text (voice commands, dictionary, grammar)
+					if a.pipeline != nil {
+						processedText, err := a.pipeline.Process(ctx, text)
+						if err != nil {
+							slog.Warn("Post-processing failed, using original text", "error", err)
+						} else if processedText != text {
+							slog.Info("Post-processed", "original", text, "processed", processedText)
+							text = processedText
+						}
+					}
 
 					// Inject text
 					injectStart := time.Now()

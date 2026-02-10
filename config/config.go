@@ -10,12 +10,13 @@ import (
 )
 
 type Config struct {
-	Hotkey        string              `toml:"hotkey"`
-	Audio         AudioConfig         `toml:"audio"`
-	Transcription TranscriptionConfig `toml:"transcription"`
-	Web           WebConfig           `toml:"web"`
-	DeveloperMode bool                `toml:"developer_mode"`
-	configPath    string              // Store path for saving
+	Hotkey         string                 `toml:"hotkey"`
+	Audio          AudioConfig            `toml:"audio"`
+	Transcription  TranscriptionConfig    `toml:"transcription"`
+	Postprocessing PostprocessingConfig   `toml:"postprocessing"`
+	Web            WebConfig              `toml:"web"`
+	DeveloperMode  bool                   `toml:"developer_mode"`
+	configPath     string                 // Store path for saving
 }
 
 type AudioConfig struct {
@@ -31,6 +32,17 @@ type TranscriptionConfig struct {
 	Prompt          string `toml:"prompt"`
 	APIKey          string `toml:"api_key"`
 	WhisperModelDir string `toml:"whisper_model_dir"`
+}
+
+type PostprocessingConfig struct {
+	Enabled          bool   `toml:"enabled"`
+	Commands         bool   `toml:"commands"`
+	Grammar          bool   `toml:"grammar"`
+	GrammarProvider  string `toml:"grammar_provider"`
+	GrammarModel     string `toml:"grammar_model"`
+	OllamaURL        string `toml:"ollama_url"`
+	OllamaModel      string `toml:"ollama_model"`
+	DictionaryFile   string `toml:"dictionary_file"`
 }
 
 type WebConfig struct {
@@ -59,6 +71,16 @@ func defaultConfig() *Config {
 			Prompt:          "",
 			APIKey:          "",
 			WhisperModelDir: filepath.Join(appData, "tokentalk", "models"),
+		},
+		Postprocessing: PostprocessingConfig{
+			Enabled:         true,
+			Commands:        true,
+			Grammar:         false,
+			GrammarProvider: "match",
+			GrammarModel:    "gpt-4o-mini",
+			OllamaURL:       "http://localhost:11434",
+			OllamaModel:     "phi3:mini",
+			DictionaryFile:  "",
 		},
 		Web: WebConfig{
 			Enabled: true,

@@ -54,6 +54,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/stats", s.handleStats)
 	mux.HandleFunc("/api/history", s.handleHistory)
+	mux.HandleFunc("/api/dictionary", s.handleDictionary)
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/ws", s.handleWebSocket)
 

@@ -50,6 +50,29 @@ api_key = ""
 # Directory for local whisper models (for future whisper.cpp support)
 whisper_model_dir = ""  # defaults to %APPDATA%\tokentalk\models
 
+[postprocessing]
+# Enable post-processing (voice commands, dictionary, grammar)
+enabled = true
+
+# Voice commands: Convert "new line" to \n, "period" to ., etc.
+commands = true
+
+# Grammar correction: Fix grammar and punctuation using LLM (adds latency)
+grammar = false
+
+# Grammar provider: "match" (same as transcription), "openai", or "ollama" (future)
+grammar_provider = "match"
+
+# Model for OpenAI grammar correction (cheap, fast, and competent)
+grammar_model = "gpt-4o-mini"
+
+# Ollama settings for local grammar correction (future)
+ollama_url = "http://localhost:11434"
+ollama_model = "phi3:mini"
+
+# Dictionary file location for custom terms and corrections
+dictionary_file = ""  # defaults to %APPDATA%\tokentalk\dictionary.txt
+
 [web]
 # Enable the web-based configuration UI and statistics dashboard
 enabled = true

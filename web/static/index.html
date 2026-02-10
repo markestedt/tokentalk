@@ -92,9 +92,78 @@
                     </label>
                 </div>
 
+                <h3 style="margin-top: 30px;">Post-Processing</h3>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="postprocessingEnabled" name="postprocessingEnabled">
+                        Enable Post-Processing
+                    </label>
+                    <small>Master toggle for all post-processing features</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="postprocessingCommands" name="postprocessingCommands">
+                        Voice Commands
+                    </label>
+                    <small>Replace "new line" with \n, "period" with ., etc.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="postprocessingGrammar" name="postprocessingGrammar">
+                        Grammar Correction (adds latency)
+                    </label>
+                    <small>Fix grammar and punctuation using LLM</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="grammarProvider">Grammar Provider</label>
+                    <select id="grammarProvider" name="grammarProvider">
+                        <option value="match">Match Transcription Provider</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="ollama">Ollama (Future)</option>
+                    </select>
+                    <small>Which provider to use for grammar correction</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="grammarModel">Grammar Model</label>
+                    <input type="text" id="grammarModel" name="grammarModel" placeholder="gpt-4o-mini">
+                    <small>Model to use for grammar correction (OpenAI)</small>
+                </div>
+
+                <div class="form-group">
+                    <button type="button" id="manageDictionary" class="btn-secondary">Manage Dictionary</button>
+                    <small>Custom terms and corrections for transcription</small>
+                </div>
+
                 <button type="submit" class="btn-primary">Save Configuration</button>
                 <div id="saveMessage" class="message"></div>
             </form>
+
+            <!-- Dictionary Modal -->
+            <div id="dictionaryModal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <h2>Custom Dictionary</h2>
+                    <p>Add custom terms and corrections to improve transcription accuracy.</p>
+
+                    <div class="dictionary-controls">
+                        <button id="addSimpleTerm" class="btn-secondary">Add Term</button>
+                        <button id="addMapping" class="btn-secondary">Add Correction</button>
+                    </div>
+
+                    <div id="dictionaryList" class="dictionary-list">
+                        <!-- Dictionary entries will be inserted here -->
+                    </div>
+
+                    <div class="modal-actions">
+                        <button id="saveDictionary" class="btn-primary">Save Dictionary</button>
+                        <button id="closeDictionary" class="btn-secondary">Close</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Statistics Page -->
