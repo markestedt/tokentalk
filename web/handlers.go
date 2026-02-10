@@ -267,7 +267,11 @@ func (s *Server) handleDeleteHistory(w http.ResponseWriter, r *http.Request) {
 	// Extract ID from path (e.g., /api/history/123)
 	path := r.URL.Path
 	parts := strings.Split(path, "/")
+
+	slog.Info("Delete history request", "path", path, "parts", parts, "len", len(parts))
+
 	if len(parts) < 4 {
+		slog.Error("Invalid path for delete", "path", path, "parts", parts)
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 		return
 	}
@@ -275,15 +279,20 @@ func (s *Server) handleDeleteHistory(w http.ResponseWriter, r *http.Request) {
 	idStr := parts[len(parts)-1]
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		slog.Error("Invalid ID format", "idStr", idStr, "error", err)
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
+
+	slog.Info("Attempting to delete dictation", "id", id)
 
 	if err := s.db.DeleteDictation(id); err != nil {
 		slog.Error("Failed to delete dictation", "error", err, "id", id)
 		http.Error(w, "Failed to delete dictation", http.StatusInternalServerError)
 		return
 	}
+
+	slog.Info("Successfully deleted dictation", "id", id)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success"})

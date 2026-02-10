@@ -53,7 +53,7 @@ func (s *Server) Start() error {
 	// API endpoints
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/stats", s.handleStats)
-	mux.HandleFunc("/api/history", s.handleHistory)
+	mux.HandleFunc("/api/history/", s.handleHistory) // Note: trailing slash for sub-paths
 	mux.HandleFunc("/api/dictionary", s.handleDictionary)
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/ws", s.handleWebSocket)
