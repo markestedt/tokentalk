@@ -10,6 +10,7 @@ import (
 
 	"markestedt/tokentalk/config"
 	"markestedt/tokentalk/storage"
+	"markestedt/tokentalk/systray"
 	"markestedt/tokentalk/web"
 )
 
@@ -73,10 +74,39 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// Run agent
-	if err := agent.Run(ctx); err != nil {
-		slog.Error("Agent error", "error", err)
-		os.Exit(1)
+	// Load icon for system tray
+	iconData, err := os.ReadFile("tokentalk.ico")
+	if err != nil {
+		slog.Warn("Failed to load icon for system tray, continuing without icon", "error", err)
+		iconData = nil
+	}
+
+	// Create system tray manager
+	trayMgr := systray.NewSystrayManager(cfg.Web.Port, iconData)
+
+	// Run agent in background
+	agentDone := make(chan error, 1)
+	go func() {
+		agentDone <- agent.Run(ctx)
+	}()
+
+	// Run system tray in main goroutine (blocking)
+	// This needs to be in the main goroutine on Windows
+	go trayMgr.Run()
+
+	// Wait for shutdown signal
+	select {
+	case <-ctx.Done():
+		slog.Info("Shutdown signal received")
+		trayMgr.Stop()
+	case <-trayMgr.WaitForQuit():
+		slog.Info("Quit requested from system tray")
+		cancel()
+	case err := <-agentDone:
+		if err != nil {
+			slog.Error("Agent error", "error", err)
+		}
+		trayMgr.Stop()
 	}
 
 	slog.Info("TokenTalk stopped")
