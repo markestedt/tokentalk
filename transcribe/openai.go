@@ -17,12 +17,13 @@ type OpenAIProvider struct {
 	apiKey        string
 	model         string
 	language      string
+	prompt        string
 	developerMode bool
 	client        *http.Client
 }
 
 // NewOpenAIProvider creates a new OpenAI transcription provider
-func NewOpenAIProvider(apiKey, model, language string, developerMode bool) *OpenAIProvider {
+func NewOpenAIProvider(apiKey, model, language, prompt string, developerMode bool) *OpenAIProvider {
 	if model == "" {
 		model = "whisper-1"
 	}
@@ -30,6 +31,7 @@ func NewOpenAIProvider(apiKey, model, language string, developerMode bool) *Open
 		apiKey:        apiKey,
 		model:         model,
 		language:      language,
+		prompt:        prompt,
 		developerMode: developerMode,
 		client:        &http.Client{},
 	}
@@ -73,7 +75,7 @@ func (p *OpenAIProvider) Transcribe(ctx context.Context, audioSeg audio.AudioSeg
 		}
 	}
 
-	// Add prompt to guide transcription quality
+	// Build prompt: always start with default, then append user's custom prompt if configured
 	prompt := "Transcribe the following audio with proper grammar, punctuation, and capitalization. " +
 		"Ensure sentences start with capital letters and end with appropriate punctuation marks (periods, question marks, or exclamation marks). " +
 		"Correct minor grammatical errors while preserving the speaker's intended meaning and tone. "
@@ -81,9 +83,18 @@ func (p *OpenAIProvider) Transcribe(ctx context.Context, audioSeg audio.AudioSeg
 		prompt += "Recognize and accurately transcribe technical terminology, programming language keywords, API names, framework names, software tools, and common development acronyms (e.g., API, REST, SQL, JSON, HTML, CSS, Git, CI/CD, etc.). "
 	}
 	prompt += "Format the output as natural, well-structured text in the configured language."
+
+	// Append user's custom prompt if configured
+	if p.prompt != "" {
+		prompt += " " + p.prompt
+	}
+
 	if err := writer.WriteField("prompt", prompt); err != nil {
 		return "", fmt.Errorf("failed to write prompt field: %w", err)
 	}
+
+	fmt.Printf("[OPENAI DEBUG] Sending %d bytes of audio (%.2fs), language=%s, model=%s\n",
+		len(wavData), audioSeg.Duration.Seconds(), p.language, p.model)
 
 	if err := writer.Close(); err != nil {
 		return "", fmt.Errorf("failed to close writer: %w", err)

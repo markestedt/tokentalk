@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -34,47 +35,46 @@ type Recorder struct {
 	startTime time.Time
 }
 
-// NewRecorder creates a new audio recorder
+// NewRecorder creates a new audio recorder with pre-initialized device
 func NewRecorder(deviceID string, maxSeconds int) (*Recorder, error) {
 	ctx, err := malgo.InitContext(nil, malgo.ContextConfig{}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize malgo context: %w", err)
 	}
 
-	return &Recorder{
+	r := &Recorder{
 		malgoCtx:   ctx,
 		deviceID:   deviceID,
 		sampleRate: 16000,
 		channels:   1,
 		maxSeconds: maxSeconds,
 		buf:        new(bytes.Buffer),
-	}, nil
-}
-
-// Start begins recording audio
-func (r *Recorder) Start(ctx context.Context) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if r.recording {
-		return fmt.Errorf("already recording")
 	}
 
-	r.buf.Reset()
-	r.recording = true
-	r.startTime = time.Now()
+	// Pre-initialize the audio device for instant recording start
+	if err := r.initDevice(); err != nil {
+		ctx.Uninit()
+		ctx.Free()
+		return nil, fmt.Errorf("failed to initialize audio device: %w", err)
+	}
 
+	return r, nil
+}
+
+// initDevice initializes and starts the audio device (called once at startup)
+func (r *Recorder) initDevice() error {
 	deviceConfig := malgo.DefaultDeviceConfig(malgo.Capture)
 	deviceConfig.Capture.Format = malgo.FormatS16
 	deviceConfig.Capture.Channels = r.channels
 	deviceConfig.SampleRate = r.sampleRate
 	deviceConfig.Alsa.NoMMap = 1
 
-	// Data callback
+	// Data callback - always running, but only buffers when recording flag is true
 	onData := func(pOutputSample, pInputSamples []byte, framecount uint32) {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 
+		// Only buffer audio data when actively recording
 		if !r.recording {
 			return
 		}
@@ -82,9 +82,6 @@ func (r *Recorder) Start(ctx context.Context) error {
 		// Check if we've exceeded max duration
 		if time.Since(r.startTime) > time.Duration(r.maxSeconds)*time.Second {
 			r.recording = false
-			if r.device != nil {
-				r.device.Stop()
-			}
 			return
 		}
 
@@ -97,19 +94,35 @@ func (r *Recorder) Start(ctx context.Context) error {
 		Data: onData,
 	})
 	if err != nil {
-		r.recording = false
 		return fmt.Errorf("failed to initialize device: %w", err)
 	}
 
 	if err := r.device.Start(); err != nil {
-		r.recording = false
+		r.device.Uninit()
+		r.device = nil
 		return fmt.Errorf("failed to start device: %w", err)
 	}
 
 	return nil
 }
 
-// Stop stops recording and returns the audio segment
+// Start begins buffering audio (device is already running)
+func (r *Recorder) Start(ctx context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.recording {
+		return fmt.Errorf("already recording")
+	}
+
+	r.buf.Reset()
+	r.recording = true
+	r.startTime = time.Now()
+
+	return nil
+}
+
+// Stop stops buffering and returns the audio segment (device stays running)
 func (r *Recorder) Stop() (AudioSegment, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -120,13 +133,10 @@ func (r *Recorder) Stop() (AudioSegment, error) {
 
 	r.recording = false
 
-	if r.device != nil {
-		r.device.Uninit()
-		r.device = nil
-	}
-
 	duration := time.Since(r.startTime)
-	data := r.buf.Bytes()
+	// Make a copy of the buffer data
+	data := make([]byte, r.buf.Len())
+	copy(data, r.buf.Bytes())
 
 	return AudioSegment{
 		Data:       data,
@@ -142,6 +152,7 @@ func (r *Recorder) Close() error {
 	defer r.mu.Unlock()
 
 	if r.device != nil {
+		r.device.Stop()
 		r.device.Uninit()
 		r.device = nil
 	}
@@ -153,6 +164,31 @@ func (r *Recorder) Close() error {
 	}
 
 	return nil
+}
+
+// CalculateRMS calculates the Root Mean Square audio level
+// Returns a value representing the average amplitude of the audio
+// Typical values: silence < 500, quiet speech ~ 1000-2000, normal speech ~ 2000-5000
+func (seg *AudioSegment) CalculateRMS() float64 {
+	if len(seg.Data) == 0 {
+		return 0
+	}
+
+	// Audio is 16-bit PCM, so we need to read 2 bytes per sample
+	numSamples := len(seg.Data) / 2
+	if numSamples == 0 {
+		return 0
+	}
+
+	var sumSquares float64
+	for i := 0; i < numSamples; i++ {
+		// Read 16-bit little-endian sample
+		sampleBytes := seg.Data[i*2 : i*2+2]
+		sample := int16(binary.LittleEndian.Uint16(sampleBytes))
+		sumSquares += float64(sample) * float64(sample)
+	}
+
+	return math.Sqrt(sumSquares / float64(numSamples))
 }
 
 // ToWAV converts the audio segment to WAV format

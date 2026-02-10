@@ -10,27 +10,32 @@ import (
 )
 
 type Config struct {
-	Hotkey        HotkeyConfig        `toml:"hotkey"`
+	Hotkey        string              `toml:"hotkey"`
 	Audio         AudioConfig         `toml:"audio"`
 	Transcription TranscriptionConfig `toml:"transcription"`
-}
-
-type HotkeyConfig struct {
-	Combo string `toml:"combo"`
+	Web           WebConfig           `toml:"web"`
+	DeveloperMode bool                `toml:"developer_mode"`
+	configPath    string              // Store path for saving
 }
 
 type AudioConfig struct {
-	Device     string `toml:"device"`
-	MaxSeconds int    `toml:"max_seconds"`
+	Device           int     `toml:"device"`
+	MaxSeconds       int     `toml:"max_seconds"`
+	SilenceThreshold float64 `toml:"silence_threshold"`
 }
 
 type TranscriptionConfig struct {
 	Provider        string `toml:"provider"`
 	Model           string `toml:"model"`
 	Language        string `toml:"language"`
-	DeveloperMode   bool   `toml:"developer_mode"`
-	OpenAIAPIKey    string `toml:"openai_api_key"`
+	Prompt          string `toml:"prompt"`
+	APIKey          string `toml:"api_key"`
 	WhisperModelDir string `toml:"whisper_model_dir"`
+}
+
+type WebConfig struct {
+	Enabled bool `toml:"enabled"`
+	Port    int  `toml:"port"`
 }
 
 // Default configuration
@@ -41,21 +46,25 @@ func defaultConfig() *Config {
 	}
 
 	return &Config{
-		Hotkey: HotkeyConfig{
-			Combo: "ctrl+shift+v",
-		},
+		Hotkey: "ctrl+shift+v",
 		Audio: AudioConfig{
-			Device:     "",
-			MaxSeconds: 120,
+			Device:           0,
+			MaxSeconds:       120,
+			SilenceThreshold: 200,
 		},
 		Transcription: TranscriptionConfig{
 			Provider:        "openai",
 			Model:           "whisper-1",
 			Language:        "en",
-			DeveloperMode:   false,
-			OpenAIAPIKey:    "",
+			Prompt:          "",
+			APIKey:          "",
 			WhisperModelDir: filepath.Join(appData, "tokentalk", "models"),
 		},
+		Web: WebConfig{
+			Enabled: true,
+			Port:    9876,
+		},
+		DeveloperMode: false,
 	}
 }
 
@@ -85,6 +94,7 @@ func Load() (*Config, error) {
 	// If config doesn't exist, create it with defaults
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		cfg := defaultConfig()
+		cfg.configPath = configPath
 		if err := save(configPath, cfg); err != nil {
 			return nil, fmt.Errorf("failed to create default config: %w", err)
 		}
@@ -97,7 +107,20 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to decode config: %w", err)
 	}
 
+	cfg.configPath = configPath
 	return cfg, nil
+}
+
+// Save saves the current configuration to disk
+func (c *Config) Save() error {
+	if c.configPath == "" {
+		path, err := ConfigPath()
+		if err != nil {
+			return err
+		}
+		c.configPath = path
+	}
+	return save(c.configPath, c)
 }
 
 // save writes the configuration to the TOML file

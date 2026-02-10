@@ -1,24 +1,32 @@
 # TokenTalk Example Configuration
 # Copy this file to %APPDATA%\tokentalk\config.toml and edit as needed
 
-[hotkey]
 # Keyboard combination to activate recording
 # Format: "modifier+modifier+key" or just "modifier+modifier"
 # Modifiers: ctrl, shift, alt, win (or windows)
-# Examples: 
+# Examples:
 #   "ctrl+win"     - Ctrl + Windows (modifier-only, hold both to record)
 #   "ctrl+shift+v" - Ctrl + Shift + V (traditional key combo)
-#   "ctrl+win+v"   - Ctrl + Windows + V  
+#   "ctrl+win+v"   - Ctrl + Windows + V
 #   "alt+space"    - Alt + Space
 # Note: Either left or right Windows key will work for "win" modifier
-combo = "ctrl+shift+v"
+hotkey = "ctrl+shift+v"
+
+# Developer mode: Enhanced recognition of technical terms, programming keywords, and dev jargon
+developer_mode = false
 
 [audio]
-# Microphone device ID (empty string = system default)
-device = ""
+# Microphone device ID (0 = system default, or specific device number)
+device = 0
 
 # Maximum recording duration in seconds
 max_seconds = 120
+
+# Silence threshold (RMS audio level): Recordings below this level are rejected as silent
+# Lower values = more sensitive (picks up quieter speech), Higher values = less sensitive
+# Typical values: 100-300 for normal speech, 50-100 for very quiet environments
+# Set to 0 to disable silence detection
+silence_threshold = 200
 
 [transcription]
 # Provider: "openai" or "whisper" (whisper not yet implemented)
@@ -32,12 +40,20 @@ model = "whisper-1"
 # Language code (ISO 639-1): "en", "es", "fr", "de", "it", "pt", "nl", etc.
 language = "en"
 
-# Developer mode: Enhanced recognition of technical terms, programming keywords, and dev jargon
-developer_mode = false
+# Optional prompt to guide transcription (helps with domain-specific terminology, formatting, etc.)
+prompt = ""
 
 # Your OpenAI API key (required for OpenAI provider)
 # Get one at: https://platform.openai.com/api-keys
-openai_api_key = ""
+api_key = ""
 
 # Directory for local whisper models (for future whisper.cpp support)
 whisper_model_dir = ""  # defaults to %APPDATA%\tokentalk\models
+
+[web]
+# Enable the web-based configuration UI and statistics dashboard
+enabled = true
+
+# Port for the web server (default: 9876)
+# Access at: http://localhost:9876
+port = 9876

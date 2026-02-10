@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TokenTalk Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TokenTalk Dashboard</h1>
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Idle</span>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-page="statistics">Statistics</button>
+            <button class="tab" data-page="history">History</button>
+            <button class="tab" data-page="settings">Settings</button>
+        </nav>
+
+        <!-- Settings Page -->
+        <div id="settingsPage" class="page">
+            <h2>Configuration</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="hotkey">Hotkey</label>
+                    <input type="text" id="hotkey" name="hotkey" required>
+                    <small class="warning">⚠️ Changing hotkey requires restart</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="provider">Provider</label>
+                    <select id="provider" name="provider" required>
+                        <option value="openai">OpenAI</option>
+                        <option value="whisper">Local Whisper</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="model">Model</label>
+                    <input type="text" id="model" name="model" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="language">Language</label>
+                    <input type="text" id="language" name="language" required>
+                    <small>Use ISO 639-1 codes (e.g., en, es, fr)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="prompt">Prompt</label>
+                    <textarea id="prompt" name="prompt" rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="password" id="apiKey" name="apiKey" placeholder="Leave blank to keep current">
+                    <small>Only required for OpenAI provider</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="audioDevice">Audio Device</label>
+                    <input type="number" id="audioDevice" name="audioDevice" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="silenceThreshold">Silence Threshold</label>
+                    <input type="number" id="silenceThreshold" name="silenceThreshold" min="0" step="10" required>
+                    <small>Audio level below this is rejected as silent. Lower = more sensitive. Set to 0 to disable.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="webEnabled" name="webEnabled">
+                        Enable Web GUI
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="webPort">Web Port</label>
+                    <input type="number" id="webPort" name="webPort" min="1024" max="65535" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="developerMode" name="developerMode">
+                        Developer Mode
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-primary">Save Configuration</button>
+                <div id="saveMessage" class="message"></div>
+            </form>
+        </div>
+
+        <!-- Statistics Page -->
+        <div id="statisticsPage" class="page active">
+            <h2>Statistics</h2>
+
+            <div class="date-filter">
+                <label>Time Range:</label>
+                <button class="filter-btn active" data-days="7">7 Days</button>
+                <button class="filter-btn" data-days="30">30 Days</button>
+                <button class="filter-btn" data-days="90">90 Days</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Dictations</h3>
+                    <div class="stat-value" id="totalDictations">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Words</h3>
+                    <div class="stat-value" id="totalWords">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Success Rate</h3>
+                    <div class="stat-value" id="successRate">0%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg Latency</h3>
+                    <div class="stat-value" id="avgLatency">0ms</div>
+                </div>
+            </div>
+
+            <div class="charts">
+                <div class="chart-container">
+                    <h3>Dictations Over Time</h3>
+                    <canvas id="dictationsChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Words Over Time</h3>
+                    <canvas id="wordsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="provider-stats">
+                <h3>Provider Statistics</h3>
+                <table id="providerTable">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Dictations</th>
+                            <th>Words</th>
+                            <th>Success Rate</th>
+                            <th>Avg Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="providerTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- History Page -->
+        <div id="historyPage" class="page">
+            <h2>Dictation History</h2>
+
+            <div class="history-controls">
+                <button id="refreshHistory" class="btn-secondary">Refresh</button>
+                <div class="pagination">
+                    <button id="prevPage" class="btn-secondary">Previous</button>
+                    <span id="pageInfo">Page 1</span>
+                    <button id="nextPage" class="btn-secondary">Next</button>
+                </div>
+            </div>
+
+            <div id="historyList" class="history-list">
+                <!-- History items will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="chart.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

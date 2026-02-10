@@ -15,13 +15,13 @@ type Provider interface {
 }
 
 // NewProvider creates a transcription provider based on configuration
-func NewProvider(cfg config.TranscriptionConfig) (Provider, error) {
+func NewProvider(cfg config.TranscriptionConfig, developerMode bool) (Provider, error) {
 	switch cfg.Provider {
 	case "openai":
-		if cfg.OpenAIAPIKey == "" {
-			return nil, fmt.Errorf("openai_api_key is required for OpenAI provider")
+		if cfg.APIKey == "" {
+			return nil, fmt.Errorf("api_key is required for OpenAI provider")
 		}
-		return NewOpenAIProvider(cfg.OpenAIAPIKey, cfg.Model, cfg.Language, cfg.DeveloperMode), nil
+		return NewOpenAIProvider(cfg.APIKey, cfg.Model, cfg.Language, cfg.Prompt, developerMode), nil
 	case "whisper":
 		return NewWhisperProvider(cfg.WhisperModelDir, cfg.Model, cfg.Language)
 	default:
