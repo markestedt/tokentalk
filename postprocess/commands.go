@@ -40,6 +40,8 @@ func DefaultVoiceCommands() []VoiceCommand {
 		{"backslash", "\\"},
 		{"at sign space", "@ "}, // @ with space (check this first before "at sign")
 		{"at sign", "@"},
+		{"at-sign", "@"},
+		{"atsign", "@"},
 		{"hash", "#"},
 		{"dollar sign", "$"},
 		{"percent sign", "%"},
