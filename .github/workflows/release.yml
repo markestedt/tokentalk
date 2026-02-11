@@ -48,6 +48,8 @@ jobs:
 
       - name: Build Windows executable
         run: go build -ldflags "-s -w" -o tokentalk-windows-amd64.exe .
+        env:
+          CGO_ENABLED: 0
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

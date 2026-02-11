@@ -43,6 +43,8 @@ type PostprocessingConfig struct {
 	OllamaURL        string `toml:"ollama_url"`
 	OllamaModel      string `toml:"ollama_model"`
 	DictionaryFile   string `toml:"dictionary_file"`
+	CodeGen          bool   `toml:"codegen"`
+	CodeGenModel     string `toml:"codegen_model"`
 }
 
 type WebConfig struct {
@@ -81,6 +83,8 @@ func defaultConfig() *Config {
 			OllamaURL:       "http://localhost:11434",
 			OllamaModel:     "phi3:mini",
 			DictionaryFile:  "",
+			CodeGen:         true,
+			CodeGenModel:    "gpt-4o-mini",
 		},
 		Web: WebConfig{
 			Enabled: true,

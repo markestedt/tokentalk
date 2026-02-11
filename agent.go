@@ -80,7 +80,20 @@ func buildPipeline(cfg *config.Config, dictionary *postprocess.Dictionary) *post
 		return pipeline
 	}
 
-	// 1. Voice commands (runs first)
+	// 0. Code generation (runs first - intercepts "code:" prefix)
+	if cfg.Postprocessing.CodeGen {
+		if cfg.Transcription.APIKey != "" {
+			codeGenProvider := postprocess.NewOpenAICodeGenProvider(
+				cfg.Transcription.APIKey,
+				cfg.Postprocessing.CodeGenModel,
+			)
+			pipeline.AddProcessor(postprocess.CodeGenProcessor(codeGenProvider))
+		} else {
+			slog.Warn("Code generation enabled but no API key configured")
+		}
+	}
+
+	// 1. Voice commands
 	if cfg.Postprocessing.Commands {
 		commands := postprocess.DefaultVoiceCommands()
 		pipeline.AddProcessor(postprocess.CommandProcessor(commands))
