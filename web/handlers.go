@@ -195,10 +195,18 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	heatmap, err := s.db.GetHeatmapStats(days)
+	if err != nil {
+		slog.Error("Failed to get heatmap stats", "error", err)
+		http.Error(w, "Failed to get statistics", http.StatusInternalServerError)
+		return
+	}
+
 	response := map[string]interface{}{
 		"overall":  overall,
 		"daily":    daily,
 		"provider": provider,
+		"heatmap":  heatmap,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

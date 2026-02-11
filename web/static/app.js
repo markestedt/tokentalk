@@ -9,6 +9,7 @@ let reconnectTimer = null;
 // Charts
 let dictationsChart = null;
 let wordsChart = null;
+let heatmapChart = null;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -237,6 +238,7 @@ async function loadStatistics() {
         updateOverallStats(data.overall);
         updateCharts(data.daily);
         updateProviderTable(data.provider);
+        updateHeatmap(data.heatmap);
     } catch (error) {
         console.error('Failed to load statistics:', error);
     }
@@ -361,6 +363,161 @@ function updateProviderTable(providerStats) {
         `;
 
         tbody.appendChild(row);
+    });
+}
+
+function updateHeatmap(heatmapStats) {
+    // Handle empty data
+    if (!heatmapStats || heatmapStats.length === 0) {
+        heatmapStats = [];
+    }
+
+    // Create a map of date -> count for quick lookup
+    const countByDate = {};
+    heatmapStats.forEach(stat => {
+        countByDate[stat.Date] = stat.Count;
+    });
+
+    // Generate all days for the past year
+    const today = new Date();
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setDate(today.getDate() - 364); // 365 days including today
+
+    // Start from the Sunday of the week containing oneYearAgo
+    const startDate = new Date(oneYearAgo);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+
+    // Generate matrix data
+    const matrixData = [];
+    const monthLabels = [];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    let currentDate = new Date(startDate);
+    let weekIndex = 0;
+    let lastMonth = -1;
+
+    // Generate data for approximately 53 weeks
+    while (currentDate <= today) {
+        for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const count = countByDate[dateStr] || 0;
+
+            // Only add data points that are within our year range and not in the future
+            if (currentDate >= oneYearAgo && currentDate <= today) {
+                matrixData.push({
+                    x: weekIndex,
+                    y: dayLabels[dayOfWeek],
+                    v: count,
+                    d: dateStr
+                });
+            }
+
+            // Track month labels (only on Sundays)
+            if (dayOfWeek === 0 && currentDate.getMonth() !== lastMonth) {
+                monthLabels.push({
+                    week: weekIndex,
+                    month: currentDate.toLocaleDateString('en-US', { month: 'short' })
+                });
+                lastMonth = currentDate.getMonth();
+            }
+
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        weekIndex++;
+    }
+
+    // Calculate color scale with better distribution
+    const counts = matrixData.map(d => d.v).filter(v => v > 0);
+    const maxCount = counts.length > 0 ? Math.max(...counts) : 1;
+
+    // Destroy existing chart
+    const ctx = document.getElementById('heatmapChart').getContext('2d');
+    if (heatmapChart) {
+        heatmapChart.destroy();
+    }
+
+    // Create GitHub-style contribution calendar
+    heatmapChart = new Chart(ctx, {
+        type: 'matrix',
+        data: {
+            datasets: [{
+                label: 'Dictations',
+                data: matrixData,
+                backgroundColor: function(context) {
+                    const value = context.dataset.data[context.dataIndex].v;
+                    if (value === 0) {
+                        return '#ebedf0'; // GitHub's empty cell color
+                    }
+                    // GitHub-style color intensity levels
+                    const intensity = value / maxCount;
+                    if (intensity <= 0.25) return '#9be9a8';
+                    if (intensity <= 0.5) return '#40c463';
+                    if (intensity <= 0.75) return '#30a14e';
+                    return '#216e39';
+                },
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                borderWidth: 2,
+                width: function(context) {
+                    const chartArea = context.chart.chartArea;
+                    if (!chartArea) return 0;
+                    return (chartArea.right - chartArea.left) / weekIndex;
+                },
+                height: function(context) {
+                    const chartArea = context.chart.chartArea;
+                    if (!chartArea) return 0;
+                    return (chartArea.bottom - chartArea.top) / 7;
+                }
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (context) => {
+                            return context[0].raw.d;
+                        },
+                        label: (context) => {
+                            const count = context.raw.v;
+                            return count === 0 ? 'No dictations' : `${count} dictation${count !== 1 ? 's' : ''}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'top',
+                    min: 0,
+                    max: weekIndex - 1,
+                    offset: true,
+                    ticks: {
+                        display: false
+                    },
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    type: 'category',
+                    labels: dayLabels,
+                    offset: true,
+                    ticks: {
+                        callback: function(value, index) {
+                            // Only show Mon, Wed, Fri like GitHub
+                            if (index === 1 || index === 3 || index === 5) {
+                                return dayLabels[index];
+                            }
+                            return '';
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
     });
 }
 
