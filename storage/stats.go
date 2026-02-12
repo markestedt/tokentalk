@@ -39,6 +39,12 @@ type OverallStats struct {
 	TotalAudioSizeBytes   int64
 }
 
+// HeatmapStats represents daily activity for contribution calendar
+type HeatmapStats struct {
+	Date  string // Date in YYYY-MM-DD format
+	Count int    // Number of dictations
+}
+
 // GetDailyStats retrieves statistics grouped by date for the last N days
 func (db *DB) GetDailyStats(days int) ([]DailyStats, error) {
 	query := `
@@ -186,4 +192,36 @@ func (db *DB) GetStatsForDateRange(startTime, endTime time.Time) (*OverallStats,
 	}
 
 	return &stats, nil
+}
+
+// GetHeatmapStats retrieves dictation counts grouped by date for the last 365 days
+func (db *DB) GetHeatmapStats(days int) ([]HeatmapStats, error) {
+	// Always get last 365 days for the contribution calendar (ignore days parameter)
+	query := `
+		SELECT
+			DATE(timestamp) as date,
+			COUNT(*) as count
+		FROM dictations
+		WHERE timestamp >= datetime('now', '-365 days')
+		GROUP BY DATE(timestamp)
+		ORDER BY date
+	`
+
+	rows, err := db.conn.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query heatmap stats: %w", err)
+	}
+	defer rows.Close()
+
+	var stats []HeatmapStats
+	for rows.Next() {
+		var s HeatmapStats
+		err := rows.Scan(&s.Date, &s.Count)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan heatmap stats: %w", err)
+		}
+		stats = append(stats, s)
+	}
+
+	return stats, rows.Err()
 }

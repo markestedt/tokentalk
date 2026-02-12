@@ -12,8 +12,9 @@ TokenTalk is a push-to-talk voice dictation tool for Windows. Press a global hot
 - **Smart Silence Detection**: Automatically filters out silent or empty recordings
 - **Instant Recording Start**: Pre-initialized audio device for minimal latency
 - **Developer Mode**: Enhanced recognition of technical terms and programming keywords
-- **Post-Processing**: Voice commands, custom dictionary, and optional grammar correction
+- **Post-Processing**: Voice commands, code generation, custom dictionary, and optional grammar correction
   - **Voice Commands**: Say "comma", "period", "new line", etc. to insert punctuation
+  - **Code Generation**: Describe code and get formatted code blocks (e.g., "code block: Python function to parse JSON")
   - **Custom Dictionary**: Define corrections for technical terms and jargon
   - **Grammar Correction**: Optional LLM-based grammar and punctuation fixes
 - **Simple Configuration**: TOML-based configuration file or web UI
@@ -250,6 +251,67 @@ Voice commands only trigger when they're complete words. For example:
 - ✅ "I want a comma here" → "I want a , here"
 - ❌ "Use the command prompt" → "Use the command prompt" (comma not replaced because it's part of "command")
 
+### Code Generation
+
+Describe code you want to write using natural language, and TokenTalk will generate properly formatted code blocks for you.
+
+**How to Use:**
+
+Start your dictation with one of these trigger phrases:
+- "code block: [description]"
+- "codeblock: [description]"
+- "code: [description]"
+
+**Examples:**
+
+- "code block: Python function to calculate fibonacci numbers"
+- "code: JavaScript async function to fetch user data from an API"
+- "codeblock: Go HTTP handler that returns JSON"
+
+**What It Does:**
+
+1. Detects the code generation trigger phrase
+2. Sends your description to the AI model
+3. Generates clean, runnable code
+4. Automatically detects the programming language
+5. Returns the code wrapped in a markdown code block
+
+**Output Format:**
+
+The generated code is automatically formatted as a markdown code block with syntax highlighting:
+
+````markdown
+```python
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+```
+````
+
+**Requirements:**
+
+- Requires an OpenAI API key configured in the `[transcription]` section
+- Uses the same API key as transcription
+- Recommended model: GPT-4o-mini (fast, affordable, capable)
+
+**Configuration:**
+
+The code generation feature is automatically enabled when post-processing is enabled:
+
+```toml
+[postprocessing]
+enabled = true  # Enables code generation along with other features
+```
+
+**Supported Languages:**
+
+The AI automatically detects the language from your description. Supported languages include:
+- Python, JavaScript, TypeScript, Go, Rust, Java, C++, C, C#
+- Ruby, PHP, Swift, Kotlin, Scala
+- SQL, Bash, PowerShell
+- HTML, CSS, YAML, JSON, and more
+
 ### Custom Dictionary
 
 Define custom terms and correction mappings to improve transcription of technical jargon, product names, and domain-specific terminology.
@@ -308,9 +370,10 @@ grammar_model = "gpt-4o-mini"     # Fast, cheap, capable model
 ### Processing Pipeline Order
 
 Post-processing runs in this order:
-1. **Voice Commands** → Replace "comma" with `,`, etc.
-2. **Dictionary** → Apply custom corrections
-3. **Grammar** (if enabled) → LLM fixes remaining issues
+1. **Code Generation** → Detect "code block:" triggers and generate code
+2. **Voice Commands** → Replace "comma" with `,`, etc.
+3. **Dictionary** → Apply custom corrections
+4. **Grammar** (if enabled) → LLM fixes remaining issues
 
 ## Getting an OpenAI API Key
 
@@ -464,11 +527,12 @@ go build -o tokentalk.exe .
 
 ### M4 - Post-Processing (Completed)
 - ✅ Voice commands (30+ commands with word boundary detection)
+- ✅ Code generation (AI-powered code block generation from natural language)
 - ✅ Custom dictionary (simple terms and correction mappings)
 - ✅ Grammar correction via OpenAI (optional, configurable)
 - ✅ Web UI dictionary editor
 - ✅ Provider abstraction for future Ollama support
-- ✅ Processing pipeline (commands → dictionary → grammar)
+- ✅ Processing pipeline (code gen → commands → dictionary → grammar)
 
 ### M2 (Planned)
 - ⏳ Local whisper.cpp support (in progress)
