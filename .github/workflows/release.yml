@@ -47,7 +47,9 @@ jobs:
         run: go mod download
 
       - name: Build Windows executable
-        run: go build -ldflags "-s -w" -o tokentalk-windows-amd64.exe .
+        env:
+          CGO_ENABLED: 1
+        run: go build -ldflags "-s -w -extldflags=-static" -o tokentalk-windows-amd64.exe .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
