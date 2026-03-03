@@ -1,0 +1,165 @@
+<UserControl x:Class="TokenTalk.UI.Pages.StatisticsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:TokenTalk.UI.Converters"
+             Background="#F8F8F8">
+
+    <DockPanel>
+
+        <!-- Header -->
+        <Grid DockPanel.Dock="Top" Margin="28,24,28,16">
+            <TextBlock Text="Statistics"
+                       FontFamily="{StaticResource AppFont}"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Foreground="#1C1C1E"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Filter bar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="28,0,28,20">
+            <Button Content="Last Week" Click="FilterWeek_Click" Margin="0,0,6,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource GhostButtonStyle}">
+                        <Setter Property="Padding" Value="14,6"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsWeekActive}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button Content="Last Month" Click="FilterMonth_Click" Margin="0,0,6,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource GhostButtonStyle}">
+                        <Setter Property="Padding" Value="14,6"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsMonthActive}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button Content="Last Year" Click="FilterYear_Click" Margin="0,0,6,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource GhostButtonStyle}">
+                        <Setter Property="Padding" Value="14,6"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsYearActive}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <Button Content="All Time" Click="FilterAllTime_Click" Margin="0,0,6,0">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource GhostButtonStyle}">
+                        <Setter Property="Padding" Value="14,6"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAllTimeActive}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
+
+        <!-- Word cloud -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid>
+                <Border Margin="28,0,28,28"
+                        Background="White"
+                        CornerRadius="12"
+                        Padding="24"
+                        MaxWidth="860"
+                        HorizontalAlignment="Center">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="1"
+                                          Color="#000000" Opacity="0.06"/>
+                    </Border.Effect>
+
+                    <!-- Loading indicator -->
+                    <Grid>
+                    <TextBlock Text="Loading…"
+                               FontFamily="{StaticResource AppFont}"
+                               FontSize="14"
+                               Foreground="#8E8E93"
+                               HorizontalAlignment="Center"
+                               Margin="0,40"
+                               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+                    <!-- Empty state -->
+                    <TextBlock Text="No dictation data in this time range."
+                               FontFamily="{StaticResource AppFont}"
+                               FontSize="14"
+                               Foreground="#8E8E93"
+                               HorizontalAlignment="Center"
+                               Margin="0,40">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsLoading}" Value="False"/>
+                                            <Condition Binding="{Binding IsEmpty}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Word cloud -->
+                    <ItemsControl ItemsSource="{Binding Words}">
+                        <ItemsControl.Style>
+                            <Style TargetType="ItemsControl">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Word}"
+                                           FontFamily="{StaticResource AppFont}"
+                                           FontSize="{Binding FontSize}"
+                                           FontWeight="Medium"
+                                           Foreground="{Binding Color, Converter={StaticResource StringToBrushConverter}}"
+                                           Margin="6,4"
+                                           VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </Grid>
+
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+    </DockPanel>
+</UserControl>

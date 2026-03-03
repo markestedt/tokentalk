@@ -1,0 +1,318 @@
+<UserControl x:Class="TokenTalk.UI.Pages.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TokenTalk.UI.ViewModels"
+             Background="#F8F8F8">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="28,24">
+
+            <!-- Header -->
+            <TextBlock Text="Settings"
+                       FontFamily="{StaticResource AppFont}"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       Foreground="#1C1C1E"
+                       Margin="0,0,0,20"/>
+
+            <!-- TRANSCRIPTION card -->
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="TRANSCRIPTION"
+                               Style="{StaticResource SectionLabelStyle}"
+                               Margin="0,0,0,16"/>
+
+                    <!-- Provider selector -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Provider"
+                                   FontFamily="{StaticResource AppFont}" FontSize="14"
+                                   Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  Style="{StaticResource InputComboStyle}"
+                                  ItemsSource="{Binding Source={x:Static vm:SettingsViewModel.ProviderOptions}}"
+                                  SelectedItem="{Binding Provider}"/>
+                    </Grid>
+
+                    <!-- Language (shared by both providers) -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Language"
+                                   FontFamily="{StaticResource AppFont}" FontSize="14"
+                                   Foreground="#3A3A3C" VerticalAlignment="Top"
+                                   Margin="0,8,0,0"/>
+                        <StackPanel Grid.Column="1">
+                            <ComboBox IsEditable="True"
+                                      Style="{StaticResource InputComboStyle}"
+                                      Text="{Binding Language, UpdateSourceTrigger=PropertyChanged}"
+                                      ItemsSource="{Binding Source={x:Static vm:SettingsViewModel.LanguageOptions}}"/>
+                            <TextBlock FontFamily="{StaticResource AppFont}" FontSize="11"
+                                       Foreground="#8E8E93" Margin="2,4,0,0"
+                                       Text="'auto' detects language per recording. A fixed code (e.g. 'sv') handles embedded English technical terms fine."/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- OpenAI-only fields -->
+                    <StackPanel Visibility="{Binding IsOpenAiProvider, Converter={StaticResource BoolToVisibilityConverter}}">
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="API Key"
+                                       FontFamily="{StaticResource AppFont}" FontSize="14"
+                                       Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                            <PasswordBox Grid.Column="1"
+                                         x:Name="_apiKeyBox"
+                                         Style="{StaticResource PasswordInputStyle}"
+                                         PasswordChanged="ApiKey_PasswordChanged"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Model"
+                                       FontFamily="{StaticResource AppFont}" FontSize="14"
+                                       Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1"
+                                     Style="{StaticResource InputStyle}"
+                                     Text="{Binding Model, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Prompt"
+                                       FontFamily="{StaticResource AppFont}" FontSize="14"
+                                       Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1"
+                                     Style="{StaticResource InputStyle}"
+                                     Text="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- whisper.cpp hint -->
+                    <TextBlock Visibility="{Binding IsLocalProvider, Converter={StaticResource BoolToVisibilityConverter}}"
+                               FontFamily="{StaticResource AppFont}" FontSize="12"
+                               Foreground="#8E8E93" Margin="0,4,0,0"
+                               Text="Select an active model in the LOCAL MODELS section below."/>
+
+                </StackPanel>
+            </Border>
+
+            <!-- LOCAL MODELS card — visible only for whisper.cpp provider -->
+            <Border Style="{StaticResource CardBorderStyle}"
+                    Visibility="{Binding IsLocalProvider, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel>
+                    <TextBlock Text="LOCAL MODELS"
+                               Style="{StaticResource SectionLabelStyle}"
+                               Margin="0,0,0,4"/>
+                    <TextBlock FontFamily="{StaticResource AppFont}" FontSize="12"
+                               Foreground="#8E8E93" Margin="0,0,0,16"
+                               Text="Models are stored in %APPDATA%\TokenTalk\models. Larger models are more accurate but slower."/>
+
+                    <!-- Model list -->
+                    <ItemsControl ItemsSource="{Binding ModelCatalog}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ModelCatalogItem}">
+                                <Border BorderBrush="#E5E5EA" BorderThickness="0,0,0,1" Padding="0,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Left: name + metadata -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Info.Name}"
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="14" FontWeight="SemiBold"
+                                                           Foreground="#1C1C1E"/>
+                                                <!-- Active badge -->
+                                                <Border Background="#EEF0FF" CornerRadius="4"
+                                                        Padding="6,2" Margin="8,0,0,0"
+                                                        Visibility="{Binding ShowActiveLabel, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <TextBlock Text="Active"
+                                                               FontFamily="{StaticResource AppFont}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="#5E5CE6"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                <TextBlock Text="{Binding Info.SizeDescription}"
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="#8E8E93"/>
+                                                <TextBlock Text=" · "
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="#8E8E93"/>
+                                                <TextBlock Text="{Binding Info.SpeedDescription}"
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="#8E8E93"/>
+                                                <TextBlock Text=" · "
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="#8E8E93"/>
+                                                <TextBlock Text="{Binding Info.QualityDescription}"
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="#8E8E93"/>
+                                            </StackPanel>
+                                            <!-- Download error -->
+                                            <TextBlock Text="{Binding DownloadError}"
+                                                       Visibility="{Binding HasDownloadError, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                       FontFamily="{StaticResource AppFont}"
+                                                       FontSize="11" Foreground="#FF3B30"
+                                                       Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+
+                                        <!-- Right: action area -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                    VerticalAlignment="Center" Margin="16,0,0,0">
+
+                                            <!-- Download button -->
+                                            <Button Content="Download"
+                                                    Style="{StaticResource GhostButtonStyle}"
+                                                    Visibility="{Binding ShowDownloadButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Click="Download_Click"/>
+
+                                            <!-- Progress panel -->
+                                            <StackPanel Orientation="Horizontal"
+                                                        Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <ProgressBar Width="120" Height="6"
+                                                             Maximum="1" Value="{Binding DownloadProgress}"
+                                                             Background="#E5E5EA"
+                                                             Foreground="{StaticResource AccentBrush}"
+                                                             VerticalAlignment="Center"
+                                                             Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding DownloadProgressText}"
+                                                           FontFamily="{StaticResource AppFont}"
+                                                           FontSize="12" Foreground="#8E8E93"
+                                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <Button Content="Cancel"
+                                                        Style="{StaticResource DangerButtonStyle}"
+                                                        Click="CancelDownload_Click"/>
+                                            </StackPanel>
+
+                                            <!-- Use button -->
+                                            <Button Content="Use"
+                                                    Style="{StaticResource GhostButtonStyle}"
+                                                    Margin="0,0,8,0"
+                                                    Visibility="{Binding ShowUseButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Click="SelectModel_Click"/>
+
+                                            <!-- Delete button -->
+                                            <Button Content="Delete"
+                                                    Style="{StaticResource DangerButtonStyle}"
+                                                    Visibility="{Binding ShowDeleteButton, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                    Click="DeleteModel_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- AUDIO card -->
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="AUDIO"
+                               Style="{StaticResource SectionLabelStyle}"
+                               Margin="0,0,0,16"/>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Hotkey"
+                                   FontFamily="{StaticResource AppFont}" FontSize="14"
+                                   Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 Style="{StaticResource InputStyle}"
+                                 Text="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Input Device"
+                                   FontFamily="{StaticResource AppFont}" FontSize="14"
+                                   Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  Style="{StaticResource InputComboStyle}"
+                                  ItemsSource="{Binding AudioDevices}"
+                                  SelectedIndex="{Binding DeviceIndex}"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Max Duration (s)"
+                                   FontFamily="{StaticResource AppFont}" FontSize="14"
+                                   Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 Style="{StaticResource InputStyle}"
+                                 Text="{Binding MaxSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Silence Threshold"
+                                   FontFamily="{StaticResource AppFont}" FontSize="14"
+                                   Foreground="#3A3A3C" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 Style="{StaticResource InputStyle}"
+                                 Text="{Binding SilenceThreshold, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- POST-PROCESSING card -->
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel>
+                    <TextBlock Text="POST-PROCESSING"
+                               Style="{StaticResource SectionLabelStyle}"
+                               Margin="0,0,0,16"/>
+
+                    <CheckBox Style="{StaticResource ToggleCheckStyle}"
+                              Content="Voice commands (e.g. 'new line', 'full stop')"
+                              IsChecked="{Binding Commands}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Save row -->
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Save Settings"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Click="Save_Click"/>
+                <TextBlock Text="Saved!"
+                           FontFamily="{StaticResource AppFont}"
+                           FontSize="14"
+                           Foreground="#30D158"
+                           VerticalAlignment="Center"
+                           Margin="16,0,0,0"
+                           Visibility="{Binding SaveSuccess, Converter={StaticResource BoolToVisibilityConverter}}"/>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

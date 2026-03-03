@@ -1,0 +1,122 @@
+<Window x:Class="TokenTalk.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TokenTalk"
+        Width="920" Height="640"
+        MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        Background="#F8F8F8">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ── Sidebar ──────────────────────────────────────── -->
+        <Border Grid.Column="0"
+                Background="White"
+                BorderBrush="#E5E5EA"
+                BorderThickness="0,0,1,0">
+            <DockPanel>
+
+                <!-- App title -->
+                <StackPanel DockPanel.Dock="Top" Margin="20,24,20,20">
+                    <TextBlock Text="TokenTalk"
+                               Foreground="#1C1C1E"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               FontFamily="{StaticResource AppFont}"/>
+                    <TextBlock Text="Voice Dictation"
+                               Foreground="#8E8E93"
+                               FontSize="13"
+                               FontFamily="{StaticResource AppFont}"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <!-- Status dot at bottom -->
+                <Border DockPanel.Dock="Bottom" Margin="16,16">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                 Fill="{Binding StatusColor, Converter={StaticResource StringToBrushConverter}}"/>
+                        <TextBlock Text="{Binding StatusText}"
+                                   Foreground="#8E8E93"
+                                   FontFamily="{StaticResource AppFont}"
+                                   FontSize="13"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Nav buttons -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,4">
+
+                    <Button x:Name="_btnHome"
+                            Style="{StaticResource NavButtonActiveStyle}"
+                            Click="BtnHome_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF015;" FontFamily="{StaticResource AppFont}"
+                                       FontSize="17" VerticalAlignment="Center"/>
+                            <TextBlock Text="Home" Margin="12,0,0,0"
+                                       FontFamily="{StaticResource AppFont}" FontSize="15"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="_btnHistory"
+                            Style="{StaticResource NavButtonStyle}"
+                            Click="BtnHistory_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF1DA;" FontFamily="{StaticResource AppFont}"
+                                       FontSize="17" VerticalAlignment="Center"/>
+                            <TextBlock Text="History" Margin="12,0,0,0"
+                                       FontFamily="{StaticResource AppFont}" FontSize="15"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="_btnDictionary"
+                            Style="{StaticResource NavButtonStyle}"
+                            Click="BtnDictionary_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF02D;" FontFamily="{StaticResource AppFont}"
+                                       FontSize="17" VerticalAlignment="Center"/>
+                            <TextBlock Text="Dictionary" Margin="12,0,0,0"
+                                       FontFamily="{StaticResource AppFont}" FontSize="15"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="_btnStatistics"
+                            Style="{StaticResource NavButtonStyle}"
+                            Click="BtnStatistics_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF080;" FontFamily="{StaticResource AppFont}"
+                                       FontSize="17" VerticalAlignment="Center"/>
+                            <TextBlock Text="Statistics" Margin="12,0,0,0"
+                                       FontFamily="{StaticResource AppFont}" FontSize="15"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="_btnSettings"
+                            Style="{StaticResource NavButtonStyle}"
+                            Click="BtnSettings_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xF013;" FontFamily="{StaticResource AppFont}"
+                                       FontSize="17" VerticalAlignment="Center"/>
+                            <TextBlock Text="Settings" Margin="12,0,0,0"
+                                       FontFamily="{StaticResource AppFont}" FontSize="15"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ── Content area ─────────────────────────────────── -->
+        <ContentControl x:Name="_contentHost" Grid.Column="1"
+                        Background="#F8F8F8"/>
+    </Grid>
+</Window>
